@@ -2,7 +2,10 @@ import { ConvexHttpClient } from "convex/browser";
 
 const client = new ConvexHttpClient(process.env.CONVEX_URL);
 
-export default async function handler(req, res) {
+export async function GET(req, res) {
+  // Extract shortCode from the URL path
+  const rawUrl = new URL(req.url, `http://${req.headers.host}`);
+  const shortCode = rawUrl.pathname.slice(1); // Remove leading '/'
   if (typeof shortCode !== "string" || shortCode.trim().length === 0) {
     return res.status(400).json({ error: "Missing shortCode" });
   }
@@ -14,4 +17,5 @@ export default async function handler(req, res) {
 
   res.writeHead(302, { Location: url.originalUrl });
   res.end();
+  return res;
 }
