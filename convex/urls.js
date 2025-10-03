@@ -1,23 +1,41 @@
-import { mutation, query } from "./_generated/server";
+import { query, mutation } from "../convex/_generated/server";
+import { v } from "convex/values";
 
-export const insert = mutation(async ({ db }, { shortCode, originalUrl, createdAt }) => {
-  const existing = await db
-    .table("urls")
-    .filter(q => q.eq(q.field("shortCode"), shortCode))
-    .first();
-
-  if (existing) {
-    throw new Error(`shortCode "${shortCode}" already exists`);
-  }
-  await db.insert("urls", { shortCode, originalUrl, createdAt });
+export const Insert = mutation({
+  args: {
+    shortCode: v.string(),
+    originalUrl: v.string(),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("urls", {
+      shortCode: args.shortCode,
+      originalUrl: args.originalUrl,
+      createdAt: args.createdAt,
+    });
+  },
 });
 
-export const getByShortCode = query(async ({ db }, { shortCode }) => {
-  return await db
-    .table("urls")
-    .filter(q => q.eq(q.field("shortCode"), shortCode))
-    .first();
+export const GetByShortCode = query({
+  args: { shortCode: v.string() },
+  handler: async (ctx, args) => {
+    const results = await ctx.db
+      .query("urls")
+      .filter(q => q.eq(q.field("shortCode"), args.shortCode))
+      .collect();
+
+    return results[0] ?? null;
+  },
 });
 
+export const GetByOriginalUrl = query({
+  args: { originalUrl: v.string() },
+  handler: async (ctx, args) => {
+    const results = await ctx.db
+      .query("urls")
+      .filter(q => q.eq(q.field("originalUrl"), args.originalUrl))
+      .collect();
 
-
+    return results[0] ?? null;
+  },
+})
