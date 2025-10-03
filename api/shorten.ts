@@ -1,7 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
-const client = new ConvexHttpClient(process.env.CONVEX_URL!);
+import { NextRequest, NextResponse} from 'next/server'
+import { api } from "../convex/_generated/api";
 
 // helper to generate random short codes
 function generateShortCode(length = 6) {
@@ -12,35 +11,39 @@ function generateShortCode(length = 6) {
 }
 
 
-export async function POST(req : VercelRequest, res : VercelResponse) {
+export async function POST(req : NextRequest, res : NextResponse) {
 
-  const { originalUrl } = req.body;
+  const client = new ConvexHttpClient(process.env.CONVEX_URL!);
+  console.log(process.env.CONVEX_URL)
+
+  const { originalUrl } = await req.json();
 
   if (!originalUrl) {
-    return res.status(400).json({ error: "Missing originalUrl" });
+    return NextResponse.json({ error: "Missing originalUrl" }, { status: 400 });
   }
 
   const createdAt = Date.now();
 
+  // Check if the originalUrl already exists in the database
+  const existingUrl = await client.query(api.urls.GetByOriginalUrl, { originalUrl });
+  if (existingUrl) {
+    return NextResponse.json({ shortUrl: `${process.env.BASE_URL!}/${existingUrl.shortCode}` }, { status: 200 });
+  }
+
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const shortCode = generateShortCode();
     try {
-      //@ts-ignore
-      await client.mutation("urls.insert", {
-        shortCode,
-        originalUrl,
-        createdAt,
-      });
-      return res
-        .status(200)
-        .json({ shortUrl: `${process.env.BASE_URL}/${shortCode}` });
-    } catch (error) {
-      //@ts-ignore
-      if (!/already exists/.test(String(error?.message ?? ""))) {
-        throw error;
+        await client.mutation(api.urls.Insert, {
+          shortCode,
+          originalUrl,
+          createdAt,
+        });
+        return NextResponse.json({ shortUrl: `${process.env.BASE_URL!}/${shortCode}` }, { status: 200 });
+
+      } catch (error) {
+         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
-    }
   }
 
-  return res.status(503).json({ error: "Unable to allocate a short code, try again." });
+   return NextResponse.json({ error: "Unable to allocate a short code, try again." }, { status: 503 });
 }
