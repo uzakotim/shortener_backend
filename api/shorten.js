@@ -20,13 +20,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing originalUrl" });
   }
 
-  const shortCode = generateShortCode();
+  const createdAt = Date.now();
 
-  await client.mutation("urls.insert", {
-    shortCode,
-    originalUrl,
-    createdAt: Date.now(),
-  });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const shortCode = generateShortCode();
+    try {
+      await client.mutation("urls.insert", {
+        shortCode,
+        originalUrl,
+        createdAt,
+      });
+      return res
+        .status(200)
+        .json({ shortUrl: `${process.env.BASE_URL}/${shortCode}` });
+    } catch (error) {
+      if (!/already exists/.test(String(error?.message ?? ""))) {
+        throw error;
+      }
+    }
+  }
 
-  res.status(200).json({ shortUrl: `${process.env.BASE_URL}/${shortCode}` });
+  res.status(503).json({ error: "Unable to allocate a short code, try again." });
 }
