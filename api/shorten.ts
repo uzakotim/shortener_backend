@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const client = new ConvexHttpClient(process.env.CONVEX_URL);
+const client = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 // helper to generate random short codes
 function generateShortCode(length = 6) {
@@ -11,7 +12,7 @@ function generateShortCode(length = 6) {
 }
 
 
-export async function POST(req, res) {
+export async function POST(req : VercelRequest, res : VercelResponse) {
 
   const { originalUrl } = req.body;
 
@@ -24,6 +25,7 @@ export async function POST(req, res) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const shortCode = generateShortCode();
     try {
+      //@ts-ignore
       await client.mutation("urls.insert", {
         shortCode,
         originalUrl,
@@ -33,6 +35,7 @@ export async function POST(req, res) {
         .status(200)
         .json({ shortUrl: `${process.env.BASE_URL}/${shortCode}` });
     } catch (error) {
+      //@ts-ignore
       if (!/already exists/.test(String(error?.message ?? ""))) {
         throw error;
       }
