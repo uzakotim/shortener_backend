@@ -10,12 +10,11 @@ function generateShortCode(length = 6) {
     .join("");
 }
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+
+export async function POST(req, res) {
 
   const { originalUrl } = req.body;
+
   if (!originalUrl) {
     return res.status(400).json({ error: "Missing originalUrl" });
   }
@@ -40,5 +39,5 @@ export default async function handler(req, res) {
     }
   }
 
-  res.status(503).json({ error: "Unable to allocate a short code, try again." });
+  return res.status(503).json({ error: "Unable to allocate a short code, try again." });
 }
